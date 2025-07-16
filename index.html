@@ -25,6 +25,7 @@
             --red-200: #fecaca;
             --red-600: #dc2626;
             --green-600: #16a34a;
+            --purple-600: #9333ea;
         }
 
         body {
@@ -470,7 +471,13 @@
         }
 
         /* Dashboard */
-        #dashboard-panel {
+        #dashboard-controls {
+            padding-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #dashboard-charts {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 2rem;
@@ -494,6 +501,7 @@
             border-bottom: 2px solid var(--gray-300);
             padding: 1rem 0 0 1rem;
             height: 250px;
+            box-sizing: border-box;
         }
         .chart-bar {
             flex: 1;
@@ -534,6 +542,7 @@
         .specialty-list {
             list-style: none;
             padding: 0;
+            margin-top: 1rem;
         }
         .specialty-list-item {
             display: flex;
@@ -834,7 +843,15 @@
                 </div>
 
                 <div id="dashboard-panel" class="tab-content hidden">
-                    <!-- Conteúdo do Dashboard será gerado aqui -->
+                    <div id="dashboard-controls">
+                        <label for="dashboard-unit-filter">Filtrar por Unidade:</label>
+                        <select id="dashboard-unit-filter" class="header-controls select">
+                            <option value="all">Todas as Unidades</option>
+                        </select>
+                    </div>
+                    <div id="dashboard-charts">
+                        <!-- Conteúdo do Dashboard será gerado aqui -->
+                    </div>
                 </div>
             </main>
         </div>
@@ -917,6 +934,8 @@ let scheduleData = []; // Agora armazena eventos com datas específicas
 let currentDate = new Date('2025-07-15T12:00:00'); 
 let draggedItem = null;
 let itemProcessingContext = null; // Guarda contexto para modais
+const colorPalette = ['#3b82f6', '#16a34a', '#ef4444', '#f97316', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1', '#d946ef'];
+
 
 // --- DOM ELEMENTS ---
 const loginPage = document.getElementById('login-page');
@@ -952,6 +971,8 @@ const csvImportInput = document.getElementById('csv-import-input');
 const addUnitForm = document.getElementById('add-unit-form');
 const unitsContainer = document.getElementById('units-container');
 const dashboardPanel = document.getElementById('dashboard-panel');
+const dashboardUnitFilter = document.getElementById('dashboard-unit-filter');
+const dashboardCharts = document.getElementById('dashboard-charts');
 
 
 // --- UTILS ---
@@ -975,6 +996,15 @@ function formatDate(date) {
 function showNotification(message) {
     notificationMessage.textContent = message;
     notificationModal.classList.remove('hidden');
+}
+
+function getColorForText(text) {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+        hash = text.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const i = Math.abs(hash) % colorPalette.length;
+    return colorPalette[i];
 }
 
 // --- DATA GENERATION ---
@@ -1049,6 +1079,7 @@ function renderWeekHeader() {
 
 function populateFilters() {
     unitFilter.innerHTML = '<option value="all">Todas</option>';
+    dashboardUnitFilter.innerHTML = '<option value="all">Todas as Unidades</option>';
     specialtyFilterSidebar.innerHTML = '<option value="all">Todas Especialidades</option>';
 
     const units = Object.keys(unitsAndRooms).sort();
@@ -1058,7 +1089,8 @@ function populateFilters() {
         const option = document.createElement('option');
         option.value = unit;
         option.textContent = unit;
-        unitFilter.appendChild(option);
+        unitFilter.appendChild(option.cloneNode(true));
+        dashboardUnitFilter.appendChild(option.cloneNode(true));
     });
 
     specialties.forEach(specialty => {
@@ -1255,16 +1287,24 @@ function renderUnitsPanel() {
 }
 
 function renderDashboard() {
-    dashboardPanel.innerHTML = '';
+    dashboardCharts.innerHTML = '';
+    const selectedUnit = dashboardUnitFilter.value;
     const weekDays = getWeekDays(currentDate).map(formatDate);
+
+    const filteredSchedule = selectedUnit === 'all'
+        ? scheduleData
+        : scheduleData.filter(s => s.unidade === selectedUnit);
+    
+    const weekSchedule = filteredSchedule.filter(s => weekDays.includes(s.date));
 
     // 1. Ocupação de Salas
     let totalSlots = 0;
-    Object.keys(unitsAndRooms).forEach(unit => {
-        totalSlots += (unitsAndRooms[unit].length || 0) * 2 * 6; // salas * períodos * dias
+    const unitsForCalc = selectedUnit === 'all' ? Object.keys(unitsAndRooms) : [selectedUnit];
+    unitsForCalc.forEach(unit => {
+        totalSlots += (unitsAndRooms[unit]?.length || 0) * 2 * 6; // salas * períodos * dias
     });
     
-    const occupiedSlots = scheduleData.filter(s => weekDays.includes(s.date)).length;
+    const occupiedSlots = weekSchedule.length;
     const emptySlots = totalSlots - occupiedSlots;
     const occupiedPercentage = totalSlots > 0 ? (occupiedSlots / totalSlots * 100).toFixed(1) : 0;
     const emptyPercentage = totalSlots > 0 ? (emptySlots / totalSlots * 100).toFixed(1) : 0;
@@ -1286,12 +1326,10 @@ function renderDashboard() {
             <div class="legend-item"><div class="legend-color-box" style="background-color: var(--gray-400);"></div>Vagas</div>
         </div>
     `;
-    dashboardPanel.appendChild(occupancyChart);
+    dashboardCharts.appendChild(occupancyChart);
 
     // 2. Alocações por Especialidade
-    const specialtyCounts = scheduleData
-        .filter(s => weekDays.includes(s.date))
-        .reduce((acc, s) => {
+    const specialtyCounts = weekSchedule.reduce((acc, s) => {
             acc[s.especialidade] = (acc[s.especialidade] || 0) + 1;
             return acc;
         }, {});
@@ -1300,7 +1338,7 @@ function renderDashboard() {
     specialtyChart.className = 'chart-container';
     let specialtyListHTML = Object.entries(specialtyCounts)
         .sort(([, a], [, b]) => b - a)
-        .map(([spec, count]) => `<li class="specialty-list-item"><span>${spec}</span> <span>${count} alocações</span></li>`)
+        .map(([spec, count]) => `<li class="specialty-list-item"><span>${spec}</span> <span>${count} turnos</span></li>`)
         .join('');
 
     if (!specialtyListHTML) {
@@ -1313,7 +1351,45 @@ function renderDashboard() {
             ${specialtyListHTML}
         </ul>
     `;
-    dashboardPanel.appendChild(specialtyChart);
+    dashboardCharts.appendChild(specialtyChart);
+
+    // 3. Capacidade de Atendimento
+    const SHIFT_HOURS = 4;
+    const capacityData = allSpecialties.map((spec, index) => {
+        const shifts = specialtyCounts[spec.nome] || 0;
+        const capacity = shifts * SHIFT_HOURS * spec.pacientesPorHora;
+        return { name: spec.nome, capacity: capacity, color: getColorForText(spec.nome) };
+    }).filter(item => item.capacity > 0)
+      .sort((a, b) => b.capacity - a.capacity);
+
+    const maxCapacity = Math.max(...capacityData.map(d => d.capacity), 1);
+
+    const capacityChart = document.createElement('div');
+    capacityChart.className = 'chart-container';
+    let capacityBarsHTML = capacityData.map(item => {
+        const percentage = (item.capacity / maxCapacity * 100).toFixed(1);
+        return `<div class="chart-bar" style="height: ${percentage}%; background-color: ${item.color};" title="${item.name}: ${item.capacity} pacientes"><span>${item.name}</span></div>`;
+    }).join('');
+    let capacityListHTML = capacityData.map(item => `
+        <li class="specialty-list-item">
+            <div class="legend-item">
+                <div class="legend-color-box" style="background-color: ${item.color};"></div>
+                <span>${item.name}</span>
+            </div>
+            <span>${item.capacity} pacientes</span>
+        </li>`).join('');
+
+    if (!capacityListHTML) {
+        capacityListHTML = '<p style="text-align: center; color: var(--gray-500);">Nenhuma capacidade de atendimento na semana.</p>';
+        capacityBarsHTML = '';
+    }
+
+    capacityChart.innerHTML = `
+        <h3>Capacidade de Atendimento Semanal</h3>
+        <div class="chart-bar-container">${capacityBarsHTML}</div>
+        <ul class="specialty-list">${capacityListHTML}</ul>
+    `;
+    dashboardCharts.appendChild(capacityChart);
 }
 
 
@@ -1427,12 +1503,17 @@ function handleTabClick(e) {
         }
     });
 
-    if (targetPanelId === 'schedule-panel') {
+    if (targetPanelId === 'schedule-panel' || targetPanelId === 'dashboard-panel') {
         scheduleControls.classList.remove('hidden');
-        mainTitle.textContent = "Painel de Gestão de Escalas";
     } else {
         scheduleControls.classList.add('hidden');
-        mainTitle.textContent = "Painel de Gestão";
+    }
+
+    if (targetPanelId === 'dashboard-panel') {
+        document.getElementById('dashboard-controls').classList.remove('hidden');
+        document.getElementById('schedule-controls').classList.add('hidden');
+    } else {
+        document.getElementById('dashboard-controls').classList.add('hidden');
     }
 }
 
@@ -1759,6 +1840,7 @@ document.addEventListener('DOMContentLoaded', () => {
             render();
         });
         unitFilter.addEventListener('change', renderScheduleGrid);
+        dashboardUnitFilter.addEventListener('change', renderDashboard);
         specialtyFilterSidebar.addEventListener('change', renderDoctorsPanel);
 
         tabs.forEach(tab => tab.addEventListener('click', handleTabClick));
