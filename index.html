@@ -11,6 +11,7 @@
             --blue-700: #1d4ed8;
             --blue-100: #dbeafe;
             --blue-800: #1e40af;
+            --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
             --gray-300: #d1d5db;
@@ -245,13 +246,15 @@
             box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06);
             display: grid;
             grid-template-columns: 150px 150px repeat(6, 1fr);
-            gap: 4px;
         }
         .grid-header {
             position: sticky;
             top: 0;
-            background-color: #f9fafb;
+            background-color: var(--gray-100);
             z-index: 10;
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 150px 150px repeat(6, 1fr);
         }
         .grid-header > div {
             padding: 0.5rem;
@@ -264,17 +267,25 @@
         .grid-header > div:first-child, .grid-header > div:nth-child(2) {
             text-align: left;
         }
-        .unit-header, .period-header {
+        .grid-row {
+            display: contents;
+        }
+        .grid-cell {
             position: sticky;
             padding: 0.5rem;
-            background-color: #f9fafb;
+            background-color: var(--white);
             border-right: 1px solid var(--gray-200);
             border-bottom: 1px solid var(--gray-200);
-            font-weight: 600;
         }
-        .unit-header { left: 0; z-index: 5; }
+        .unit-header { left: 0; z-index: 5; font-weight: 600; }
         .period-header { left: 150px; z-index: 5; }
         .period-header .period-text { font-size: 0.75rem; color: var(--gray-500); }
+        .grid-row.is-odd .grid-cell {
+            background-color: var(--gray-50);
+        }
+        .grid-row.unit-start .grid-cell {
+            border-top: 3px solid var(--blue-600);
+        }
 
         /* Estilos de Drag and Drop */
         .draggable {
@@ -298,14 +309,11 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
         .drop-zone {
-            border-bottom: 1px solid var(--gray-200);
-            border-right: 1px solid var(--gray-200);
-            padding: 0.5rem;
             min-height: 100px;
             transition: all 0.2s ease;
         }
         .drop-zone.drag-over {
-            background-color: #e0f2fe;
+            background-color: #e0f2fe !important;
             border-style: dashed;
         }
         .remove-zone.drag-over {
@@ -400,6 +408,9 @@
             position: sticky;
             top: 0;
         }
+        .data-table .btn-remove {
+            padding: 0.5rem;
+        }
 
         /* Gerenciamento de Unidades */
         #units-container {
@@ -456,6 +467,82 @@
         }
         .add-room-form button {
             padding: 0.5rem;
+        }
+
+        /* Dashboard */
+        #dashboard-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+        .chart-container {
+            background-color: var(--white);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
+        }
+        .chart-container h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .chart-bar-container {
+            width: 100%;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            border-left: 2px solid var(--gray-300);
+            border-bottom: 2px solid var(--gray-300);
+            padding: 1rem 0 0 1rem;
+            height: 250px;
+        }
+        .chart-bar {
+            flex: 1;
+            background-color: var(--blue-600);
+            color: var(--white);
+            text-align: center;
+            position: relative;
+            transition: height 0.3s ease-out;
+        }
+        .chart-bar.secondary {
+            background-color: var(--gray-400);
+        }
+        .chart-bar span {
+            font-size: 0.75rem;
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend-color-box {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        .specialty-list {
+            list-style: none;
+            padding: 0;
+        }
+        .specialty-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .specialty-list-item span:first-child {
+            font-weight: 500;
         }
 
 
@@ -606,9 +693,11 @@
 
                 <div class="tabs">
                     <button class="tab-button active" data-tab="schedule-panel">Gestão de Escalas</button>
-                    <button class="tab-button" data-tab="registration-panel">Cadastro de Profissionais</button>
-                    <button class="tab-button" data-tab="data-panel">Gerenciar Dados</button>
-                    <button class="tab-button" data-tab="units-panel">Gerenciar Unidades</button>
+                    <button class="tab-button" data-tab="registration-panel">Profissionais</button>
+                    <button class="tab-button" data-tab="specialties-panel">Especialidades</button>
+                    <button class="tab-button" data-tab="units-panel">Unidades</button>
+                    <button class="tab-button" data-tab="data-panel">Importar/Exportar</button>
+                    <button class="tab-button" data-tab="dashboard-panel">Dashboard</button>
                 </div>
 
                 <div id="schedule-panel" class="tab-content">
@@ -629,7 +718,9 @@
                             </div>
                             <div class="form-group">
                                 <label for="prof-specialty">Especialidade</label>
-                                <input type="text" id="prof-specialty" required>
+                                <select id="prof-specialty" required>
+                                    <option value="">Selecione...</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="prof-phone">Telefone</label>
@@ -647,10 +738,45 @@
                                         <th>Nome</th>
                                         <th>Especialidade</th>
                                         <th>Telefone</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="professionals-table-body">
                                     <!-- Lista de profissionais será populada pelo JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="specialties-panel" class="tab-content hidden">
+                    <div class="data-management-section">
+                        <form id="specialty-form">
+                            <h3>Cadastrar Nova Especialidade</h3>
+                            <div class="form-group">
+                                <label for="specialty-name">Nome da Especialidade</label>
+                                <input type="text" id="specialty-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="specialty-rate">Pacientes Atendidos por Hora</label>
+                                <input type="number" id="specialty-rate" min="1" required>
+                            </div>
+                            <button type="submit">Adicionar Especialidade</button>
+                        </form>
+                    </div>
+                     <div class="data-management-section">
+                        <h3>Especialidades Cadastradas</h3>
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Pacientes/Hora</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="specialties-table-body">
+                                    <!-- Lista de especialidades será populada pelo JS -->
                                 </tbody>
                             </table>
                         </div>
@@ -706,6 +832,10 @@
                         <!-- Cards de unidades serão gerados pelo JS -->
                     </div>
                 </div>
+
+                <div id="dashboard-panel" class="tab-content hidden">
+                    <!-- Conteúdo do Dashboard será gerado aqui -->
+                </div>
             </main>
         </div>
     </div>
@@ -748,11 +878,15 @@
 
 <script>
 // --- MOCK DATA ---
-const initialRecurringTemplate = [
-    { recurringId: 'rec1', unidade: "Angra", sala: "CONS 01", dayOfWeek: 1, periodo: "Manhã", especialidade: "GASTROENTEROLOGIA", profissional_nome: "LEANDRO VIEIRA" },
-    { recurringId: 'rec2', unidade: "Angra", sala: "CONS 02", dayOfWeek: 1, periodo: "Manhã", especialidade: "ORTOPEDIA", profissional_nome: "RODRIGO BASTOS" },
-    { recurringId: 'rec3', unidade: "Bangu", sala: "CONS 02", dayOfWeek: 2, periodo: "Manhã", especialidade: "DERMATOLOGIA", profissional_nome: "DAYSE DERMATO" },
-    { recurringId: 'rec4', unidade: "Barra", sala: "CONS 04", dayOfWeek: 1, periodo: "Manhã", especialidade: "ANGIOLOGIA", profissional_nome: "MONICA" },
+let allSpecialties = [
+    { nome: "GASTROENTEROLOGIA", pacientesPorHora: 4 },
+    { nome: "ORTOPEDIA", pacientesPorHora: 5 },
+    { nome: "DERMATOLOGIA", pacientesPorHora: 6 },
+    { nome: "ANGIOLOGIA", pacientesPorHora: 4 },
+    { nome: "GINECOLOGIA", pacientesPorHora: 4 },
+    { nome: "UROLOGIA", pacientesPorHora: 5 },
+    { nome: "CARDIOLOGIA", pacientesPorHora: 4 },
+    { nome: "OTORRINOLARINGOLOGIA", pacientesPorHora: 6 },
 ];
 
 let allProfessionals = [
@@ -766,7 +900,16 @@ let allProfessionals = [
     { nome: "THIAGO COSTA", especialidade: "UROLOGIA", telefone: "(21) 94444-3333" },
     { nome: "DAYSE DERMATO", especialidade: "DERMATOLOGIA", telefone: "(21) 93333-2222" },
     { nome: "CLAUDIA ANECHINO", especialidade: "CARDIOLOGIA", telefone: "(21) 92222-1111" },
+    { nome: "MONICA", especialidade: "ANGIOLOGIA", telefone: "(21) 91234-5678" }
 ];
+
+const initialRecurringTemplate = [
+    { recurringId: 'rec1', unidade: "Angra", sala: "CONS 01", dayOfWeek: 1, periodo: "Manhã", profissional_nome: "LEANDRO VIEIRA" },
+    { recurringId: 'rec2', unidade: "Angra", sala: "CONS 02", dayOfWeek: 1, periodo: "Manhã", profissional_nome: "RODRIGO BASTOS" },
+    { recurringId: 'rec3', unidade: "Bangu", sala: "CONS 02", dayOfWeek: 2, periodo: "Manhã", profissional_nome: "DAYSE DERMATO" },
+    { recurringId: 'rec4', unidade: "Barra", sala: "CONS 04", dayOfWeek: 1, periodo: "Manhã", profissional_nome: "MONICA" },
+];
+
 
 // --- APP STATE ---
 let unitsAndRooms = {};
@@ -797,6 +940,9 @@ const tabs = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 const registrationForm = document.getElementById('registration-form');
 const professionalsTableBody = document.getElementById('professionals-table-body');
+const specialtyForm = document.getElementById('specialty-form');
+const specialtiesTableBody = document.getElementById('specialties-table-body');
+const profSpecialtySelect = document.getElementById('prof-specialty');
 const fullScheduleTableBody = document.getElementById('full-schedule-table-body');
 const scheduleControls = document.getElementById('schedule-controls');
 const mainTitle = document.querySelector('.main-title');
@@ -805,6 +951,7 @@ const importCsvBtn = document.getElementById('import-csv-btn');
 const csvImportInput = document.getElementById('csv-import-input');
 const addUnitForm = document.getElementById('add-unit-form');
 const unitsContainer = document.getElementById('units-container');
+const dashboardPanel = document.getElementById('dashboard-panel');
 
 
 // --- UTILS ---
@@ -832,15 +979,20 @@ function showNotification(message) {
 
 // --- DATA GENERATION ---
 function initializeUnitsAndRooms() {
-    unitsAndRooms = initialRecurringTemplate.reduce((acc, item) => {
-        if (!acc[item.unidade]) {
-            acc[item.unidade] = [];
+    unitsAndRooms = {};
+    const allKnownUnits = new Set(initialRecurringTemplate.map(item => item.unidade));
+    
+    allKnownUnits.forEach(unit => {
+        if (!unitsAndRooms[unit]) {
+            unitsAndRooms[unit] = [];
         }
-        if (!acc[item.unidade].includes(item.sala)) {
-            acc[item.unidade].push(item.sala);
+    });
+
+    initialRecurringTemplate.forEach(item => {
+        if (!unitsAndRooms[item.unidade].includes(item.sala)) {
+            unitsAndRooms[item.unidade].push(item.sala);
         }
-        return acc;
-    }, {});
+    });
 }
 
 function generateInitialSchedule() {
@@ -849,6 +1001,9 @@ function generateInitialSchedule() {
     today.setHours(0,0,0,0);
 
     initialRecurringTemplate.forEach(template => {
+        const professional = allProfessionals.find(p => p.nome === template.profissional_nome);
+        if (!professional) return;
+
         for (let i = -26; i < 26; i++) {
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() + (i * 7));
@@ -863,7 +1018,7 @@ function generateInitialSchedule() {
                     unidade: template.unidade,
                     sala: template.sala,
                     periodo: template.periodo,
-                    especialidade: template.especialidade,
+                    especialidade: professional.especialidade,
                     profissional_nome: template.profissional_nome,
                 });
             }
@@ -878,8 +1033,11 @@ function render() {
     renderScheduleGrid();
     renderDoctorsPanel();
     renderProfessionalsTable();
+    renderSpecialtiesPanel();
+    populateSpecialtyDropdown();
     renderFullScheduleTable();
     renderUnitsPanel();
+    renderDashboard();
 }
 
 function renderWeekHeader() {
@@ -894,7 +1052,7 @@ function populateFilters() {
     specialtyFilterSidebar.innerHTML = '<option value="all">Todas Especialidades</option>';
 
     const units = Object.keys(unitsAndRooms).sort();
-    const specialties = [...new Set(allProfessionals.map(item => item.especialidade))].sort();
+    const specialties = allSpecialties.map(s => s.nome).sort();
 
     units.forEach(unit => {
         const option = document.createElement('option');
@@ -941,7 +1099,7 @@ function renderScheduleGrid() {
     const daysOfWeek = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     const header = document.createElement('div');
-    header.className = 'grid-header contents';
+    header.className = 'grid-header';
     header.innerHTML = `
         <div>Unidade</div>
         <div>Sala / Período</div>
@@ -952,20 +1110,28 @@ function renderScheduleGrid() {
     const filteredUnit = unitFilter.value;
     const unitsToRender = filteredUnit === 'all' ? Object.keys(unitsAndRooms).sort() : (unitsAndRooms[filteredUnit] ? [filteredUnit] : []);
 
-    unitsToRender.forEach(unit => {
+    unitsToRender.forEach((unit, unitIndex) => {
         const rooms = unitsAndRooms[unit] || [];
-        rooms.forEach(room => {
-            ['Manhã', 'Tarde'].forEach(period => {
+        rooms.forEach((room, roomIndex) => {
+            ['Manhã', 'Tarde'].forEach((period, periodIndex) => {
                 const row = document.createElement('div');
-                row.className = 'contents';
-                
-                row.innerHTML += `
-                    <div class="unit-header">${unit}</div>
-                    <div class="period-header">
-                        <p>${room}</p>
-                        <p class="period-text">${period}</p>
-                    </div>
-                `;
+                row.className = 'grid-row';
+                if (roomIndex % 2 !== 0) { // Alterna por sala (consultório)
+                    row.classList.add('is-odd');
+                }
+                if (roomIndex === 0 && periodIndex === 0) {
+                    row.classList.add('unit-start');
+                }
+
+                const unitCell = document.createElement('div');
+                unitCell.className = 'grid-cell unit-header';
+                unitCell.textContent = unit;
+                row.appendChild(unitCell);
+
+                const periodCell = document.createElement('div');
+                periodCell.className = 'grid-cell period-header';
+                periodCell.innerHTML = `<p>${room}</p><p class="period-text">${period}</p>`;
+                row.appendChild(periodCell);
 
                 week.forEach(day => {
                     const dateStr = formatDate(day);
@@ -974,7 +1140,7 @@ function renderScheduleGrid() {
                     );
                     
                     const cell = document.createElement('div');
-                    cell.className = 'drop-zone';
+                    cell.className = 'grid-cell drop-zone';
                     cell.dataset.date = dateStr; 
                     cell.dataset.unit = unit;
                     cell.dataset.room = room;
@@ -1006,8 +1172,34 @@ function renderProfessionalsTable() {
             <td>${prof.nome}</td>
             <td>${prof.especialidade}</td>
             <td>${prof.telefone || 'N/A'}</td>
+            <td><button class="btn-remove delete-prof-btn" data-nome="${prof.nome}">&times;</button></td>
         `;
         professionalsTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-prof-btn').forEach(btn => btn.addEventListener('click', handleDeleteProfessional));
+}
+
+function renderSpecialtiesPanel() {
+    specialtiesTableBody.innerHTML = '';
+    allSpecialties.forEach(spec => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${spec.nome}</td>
+            <td>${spec.pacientesPorHora}</td>
+            <td><button class="btn-remove delete-spec-btn" data-nome="${spec.nome}">&times;</button></td>
+        `;
+        specialtiesTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-spec-btn').forEach(btn => btn.addEventListener('click', handleDeleteSpecialty));
+}
+
+function populateSpecialtyDropdown() {
+    profSpecialtySelect.innerHTML = '<option value="">Selecione...</option>';
+    allSpecialties.forEach(spec => {
+        const option = document.createElement('option');
+        option.value = spec.nome;
+        option.textContent = spec.nome;
+        profSpecialtySelect.appendChild(option);
     });
 }
 
@@ -1057,11 +1249,73 @@ function renderUnitsPanel() {
         unitsContainer.appendChild(card);
     });
     
-    // Add event listeners after rendering
     document.querySelectorAll('.remove-room-btn').forEach(btn => btn.addEventListener('click', handleRemoveRoom));
     document.querySelectorAll('.remove-unit-btn').forEach(btn => btn.addEventListener('click', handleRemoveUnit));
     document.querySelectorAll('.add-room-form').forEach(form => form.addEventListener('submit', handleAddRoom));
 }
+
+function renderDashboard() {
+    dashboardPanel.innerHTML = '';
+    const weekDays = getWeekDays(currentDate).map(formatDate);
+
+    // 1. Ocupação de Salas
+    let totalSlots = 0;
+    Object.keys(unitsAndRooms).forEach(unit => {
+        totalSlots += (unitsAndRooms[unit].length || 0) * 2 * 6; // salas * períodos * dias
+    });
+    
+    const occupiedSlots = scheduleData.filter(s => weekDays.includes(s.date)).length;
+    const emptySlots = totalSlots - occupiedSlots;
+    const occupiedPercentage = totalSlots > 0 ? (occupiedSlots / totalSlots * 100).toFixed(1) : 0;
+    const emptyPercentage = totalSlots > 0 ? (emptySlots / totalSlots * 100).toFixed(1) : 0;
+
+    const occupancyChart = document.createElement('div');
+    occupancyChart.className = 'chart-container';
+    occupancyChart.innerHTML = `
+        <h3>Ocupação de Salas na Semana</h3>
+        <div class="chart-bar-container">
+            <div class="chart-bar" style="height: ${occupiedPercentage}%;" title="Ocupadas: ${occupiedSlots}">
+                <span>Ocupadas (${occupiedPercentage}%)</span>
+            </div>
+            <div class="chart-bar secondary" style="height: ${emptyPercentage}%;" title="Vagas: ${emptySlots}">
+                <span>Vagas (${emptyPercentage}%)</span>
+            </div>
+        </div>
+        <div class="chart-legend">
+            <div class="legend-item"><div class="legend-color-box" style="background-color: var(--blue-600);"></div>Ocupadas</div>
+            <div class="legend-item"><div class="legend-color-box" style="background-color: var(--gray-400);"></div>Vagas</div>
+        </div>
+    `;
+    dashboardPanel.appendChild(occupancyChart);
+
+    // 2. Alocações por Especialidade
+    const specialtyCounts = scheduleData
+        .filter(s => weekDays.includes(s.date))
+        .reduce((acc, s) => {
+            acc[s.especialidade] = (acc[s.especialidade] || 0) + 1;
+            return acc;
+        }, {});
+    
+    const specialtyChart = document.createElement('div');
+    specialtyChart.className = 'chart-container';
+    let specialtyListHTML = Object.entries(specialtyCounts)
+        .sort(([, a], [, b]) => b - a)
+        .map(([spec, count]) => `<li class="specialty-list-item"><span>${spec}</span> <span>${count} alocações</span></li>`)
+        .join('');
+
+    if (!specialtyListHTML) {
+        specialtyListHTML = '<p style="text-align: center; color: var(--gray-500);">Nenhuma alocação na semana.</p>';
+    }
+
+    specialtyChart.innerHTML = `
+        <h3>Alocações por Especialidade na Semana</h3>
+        <ul class="specialty-list">
+            ${specialtyListHTML}
+        </ul>
+    `;
+    dashboardPanel.appendChild(specialtyChart);
+}
+
 
 // --- EVENT HANDLERS & LOGIC ---
 function handleDragStart(e) {
@@ -1185,11 +1439,11 @@ function handleTabClick(e) {
 function handleAddProfessional(e) {
     e.preventDefault();
     const nameInput = document.getElementById('prof-name');
-    const specialtyInput = document.getElementById('prof-specialty');
+    const specialtySelect = document.getElementById('prof-specialty');
     const phoneInput = document.getElementById('prof-phone');
     
     const name = nameInput.value.trim();
-    const specialty = specialtyInput.value.trim();
+    const specialty = specialtySelect.value;
     const phone = phoneInput.value.trim();
 
     if (name && specialty) {
@@ -1204,6 +1458,56 @@ function handleAddProfessional(e) {
         render();
     } else {
         showNotification("Por favor, preencha nome e especialidade.");
+    }
+}
+
+function handleDeleteProfessional(e) {
+    const profNameToDelete = e.target.dataset.nome;
+    const isInUse = scheduleData.some(item => item.profissional_nome === profNameToDelete);
+
+    if (isInUse) {
+        showNotification(`O profissional ${profNameToDelete} está alocado na escala e não pode ser removido.`);
+        return;
+    }
+
+    if (confirm(`Tem certeza que deseja remover o profissional ${profNameToDelete}?`)) {
+        allProfessionals = allProfessionals.filter(p => p.nome !== profNameToDelete);
+        render();
+    }
+}
+
+function handleAddSpecialty(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('specialty-name');
+    const rateInput = document.getElementById('specialty-rate');
+    const name = nameInput.value.trim().toUpperCase();
+    const rate = parseInt(rateInput.value, 10);
+
+    if (name && rate > 0) {
+        if (allSpecialties.some(s => s.nome === name)) {
+            showNotification(`Especialidade "${name}" já existe.`);
+            return;
+        }
+        allSpecialties.push({ nome: name, pacientesPorHora: rate });
+        specialtyForm.reset();
+        render();
+    } else {
+        showNotification("Por favor, preencha todos os campos corretamente.");
+    }
+}
+
+function handleDeleteSpecialty(e) {
+    const specNameToDelete = e.target.dataset.nome;
+    const isInUse = allProfessionals.some(p => p.especialidade === specNameToDelete);
+
+    if (isInUse) {
+        showNotification(`A especialidade ${specNameToDelete} está em uso por profissionais e não pode ser removida.`);
+        return;
+    }
+
+    if (confirm(`Tem certeza que deseja remover a especialidade ${specNameToDelete}?`)) {
+        allSpecialties = allSpecialties.filter(s => s.nome !== specNameToDelete);
+        render();
     }
 }
 
@@ -1459,6 +1763,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tabs.forEach(tab => tab.addEventListener('click', handleTabClick));
         registrationForm.addEventListener('submit', handleAddProfessional);
+        specialtyForm.addEventListener('submit', handleAddSpecialty);
         exportCsvBtn.addEventListener('click', exportToCSV);
         importCsvBtn.addEventListener('click', () => csvImportInput.click());
         csvImportInput.addEventListener('change', importFromCSV);
