@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Escalas Médicas v1.0</title>
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+</head>
+<body>
+
+    <div id="login-page">
+        <div class="login-container">
+            <h1>Acesso ao Sistema</h1>
+            <button id="login-gestor" class="login-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a5.5 5.5 0 0 1 5.5 5.5c0 1.58-.68 3-1.75 3.99.78.89 1.25 2.05 1.25 3.26v1.25H7v-1.25c0-1.21.47-2.37 1.25-3.26A5.49 5.49 0 0 1 6.5 8a5.5 5.5 0 0 1 5.5-5.5Zm0 2A3.5 3.5 0 0 0 8.5 8a3.5 3.5 0 0 0 3.5 3.5A3.5 3.5 0 0 0 15.5 8 3.5 3.5 0 0 0 12 4.5Zm-4 10.5h8v.75c0 .9-.75 1.65-1.68 1.65h-4.64C8.75 17.4 8 16.65 8 15.75v-.75Z"></path></svg>
+                Acessar como Gestor
+            </button>
+            <button id="login-colaborador" class="login-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a5.5 5.5 0 0 1 5.5 5.5c0 1.58-.68 3-1.75 3.99.78.89 1.25 2.05 1.25 3.26v1.25H7v-1.25c0-1.21.47-2.37 1.25-3.26A5.49 5.49 0 0 1 6.5 8a5.5 5.5 0 0 1 5.5-5.5Zm0 2A3.5 3.5 0 0 0 8.5 8a3.5 3.5 0 0 0 3.5 3.5A3.5 3.5 0 0 0 15.5 8 3.5 3.5 0 0 0 12 4.5Zm-4 10.5h8v.75c0 .9-.75 1.65-1.68 1.65h-4.64C8.75 17.4 8 16.65 8 15.75v-.75Z"></path></svg>
+                Acessar como Colaborador
+            </button>
+        </div>
+        <div class="login-footer">
+            &copy; 2025 Sistema de Escalas. Sergio Motta.
+        </div>  
+    </div>
+
+    <div id="gestor-login-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Login do Gestor</h2>
+            <form id="gestor-login-form">
+                <div class="form-group">
+                    <label for="gestor-username">Usuário</label>
+                    <input type="text" id="gestor-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="gestor-password">Senha</label>
+                    <input type="password" id="gestor-password" required autocomplete="current-password">
+                </div>
+                <p id="login-error-msg" class="hidden">Usuário ou senha inválidos.</p>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="cancel-login-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-page" class="hidden">
+        <div class="app-container">
+            <aside class="sidebar">
+                <h2>Profissionais</h2>
+                <div class="form-group">
+                    <select id="specialty-filter-sidebar">
+                        <option value="all">Filtrar por Especialidade</option>
+                    </select>
+                </div>
+                <div id="doctors-panel">
+                </div>
+                <div id="remove-zone">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 0 24 24" width="48px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+                    <p>Arraste aqui para remover</p>
+                </div>
+            </aside>
+
+            <main class="main-content">
+                <header class="main-header">
+                    <div>
+                        <h1 class="main-title">Gestão de Escalas</h1>
+                        <p id="current-week-display">Carregando...</p>
+                    </div>
+                    <div id="schedule-controls">
+                        <select id="unit-filter">
+                            <option value="all">Todas as Unidades</option>
+                        </select>
+                        <select id="specialty-filter-main">
+                            <option value="all">Todas as Especialidades</option>
+                        </select>
+                        <button id="prev-week" title="Semana Anterior">&lt;</button>
+                        <button id="next-week" title="Próxima Semana">&gt;</button>
+                    </div>
+                </header>
+
+                <nav class="tabs">
+                    <button class="tab-button active" data-tab="schedule-panel" data-action="handleTabSwitch" id="tab-btn-schedule">Gestão de Escalas</button>
+                    <button class="tab-button" data-tab="dashboard-panel" data-action="handleTabSwitch" id="tab-btn-dashboard">Dashboard</button>
+                    <button class="tab-button" data-tab="data-panel" data-action="handleTabSwitch" id="tab-btn-data">Importar/Exportar</button>
+                    <button class="tab-button" data-tab="registration-management-panel" data-action="handleTabSwitch" id="tab-btn-registration">Cadastros</button>
+                </nav>
+                <div id="schedule-panel" class="tab-panel">
+                    <div id="schedule-grid-container"> <div id="schedule-grid">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="data-panel" class="tab-panel hidden">
+                    <h2>Gerenciamento de Dados</h2>
+                    <div class="data-actions">
+                        <button id="export-csv-btn">Exportar Dados Brutos (CSV)</button>
+                        <button id="export-timesheet-btn">Exportar Folha de Ponto</button>
+                        <button id="export-db-btn">Exportar Backup Completo (JSON)</button>
+                        <input type="file" id="import-csv-input" class="hidden" accept=".csv">
+                        <label for="import-csv-input" id="import-csv-label">Importar Escala (CSV)</label>
+                        <button id="delete-selected-btn" class="btn-danger">Apagar Selecionados</button>
+                    </div>
+                    
+                    <h2 style="margin-top: 30px;">Impressão</h2>
+                    <div class="data-actions">
+                         <button id="print-doctors-schedule-btn">Imprimir Escala Médica</button>
+                         <button id="print-nurses-schedule-btn">Imprimir Escala de Enfermagem</button>
+                    </div>
+
+                    <div style="overflow-x: auto; margin-top: 20px;">
+                        <table id="full-schedule-table" class="management-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all-rows" title="Selecionar Todos"></th>
+                                    <th>Data</th>
+                                    <th>Unidade</th>
+                                    <th>Sala</th>
+                                    <th>Período</th>
+                                    <th>Profissional</th>
+                                    <th>Especialidade</th>
+                                    <th>Horário</th>
+                                    <th>Validado</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="dashboard-panel" class="tab-panel hidden">
+                    <h2 style="color: var(--primary-color); margin-bottom: 20px;">Análise de Atendimentos</h2>
+                    
+                    <nav class="dashboard-sub-tabs">
+                        <button class="dashboard-sub-tab-button active" data-dashboard-tab="daily-summary">Resumo Diário</button>
+                        <button class="dashboard-sub-tab-button" data-dashboard-tab="date-range">Por Período</button>
+                    </nav>
+
+                    <div id="daily-summary" class="dashboard-filter-panel">
+                        <div class="dashboard-controls">
+                            <label for="dashboard-unit-filter-daily">Filtrar por Unidade:</label>
+                            <select id="dashboard-unit-filter-daily">
+                                <option value="all">Todas</option>
+                            </select>
+
+                            <label for="dashboard-time-filter-daily">Filtrar por Horário:</label>
+                            <select id="dashboard-time-filter-daily">
+                                <option value="all">Todos</option>
+                                <option value="Manhã">Manhã</option>
+                                <option value="Tarde">Tarde</option>
+                            </select>
+                            
+                            <label for="dashboard-weekday-filter">Filtrar por Dia da Semana:</label>
+                            <select id="dashboard-weekday-filter">
+                                <option value="all">Todos os Dias</option>
+                                <option value="1">Segunda-feira</option>
+                                <option value="2">Terça-feira</option>
+                                <option value="3">Quarta-feira</option>
+                                <option value="4">Quinta-feira</option>
+                                <option value="5">Sexta-feira</option>
+                                <option value="6">Sábado</option>
+                                <option value="0">Domingo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="date-range" class="dashboard-filter-panel hidden">
+                        <div class="dashboard-controls">
+                            <label for="dashboard-unit-filter-date-range">Filtrar por Unidade:</label>
+                            <select id="dashboard-unit-filter-date-range">
+                                <option value="all">Todas</option>
+                            </select>
+
+                            <label for="dashboard-start-date">De:</label>
+                            <input type="date" id="dashboard-start-date">
+
+                            <label for="dashboard-end-date">Até:</label>
+                            <input type="date" id="dashboard-end-date">
+                        </div>
+                    </div>
+                    
+                    <div id="kpi-container" style="display: flex; gap: 20px; margin-bottom: 25px;">
+                        <div class="kpi-card">
+                            <h3>Total de Atendimentos Agendados</h3>
+                            <p id="kpi-total-scheduled">0</p>
+                        </div>
+                        <div class="kpi-card">
+                            <h3>Total de Atendimentos Validados</h3>
+                            <p id="kpi-total-validated">0</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 20px;">Distribuição de Atendimentos Agendados por Especialidade (%)</h3>
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 20px;">Capacidade de Atendimento Semanal por Especialidade</h3>
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="capacityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="registration-management-panel" class="tab-panel hidden">
+                    <nav class="sub-tabs">
+                        <button class="sub-tab-button active" data-subtab="professionals">Profissionais</button>
+                        <button class="sub-tab-button" data-subtab="specialties">Especialidades</button>
+                        <button class="sub-tab-button" data-subtab="units">Unidades</button>
+                    </nav>
+                    
+                    <div id="subtab-professionals" class="sub-tab-panel">
+                      <div class="registration-grid">
+                        <div class="registration-form-container">
+                          <h3>Adicionar/Editar Profissional</h3>
+                          <form id="professional-form-modal"> <input type="hidden" id="professional-id">
+                            <div class="form-group">
+                              <label for="professional-name">Nome Completo</label>
+                              <input type="text" id="professional-name" required>
+                            </div>
+                            <div class="form-group">
+                              <label for="professional-specialty">Especialidade</label>
+                              <select id="professional-specialty" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="professional-conselho-tipo">Tipo de Conselho</label>
+                                <select id="professional-conselho-tipo" required>
+                                    <option value="CRM" selected>CRM</option>
+                                    <option value="COREN">COREN</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="professional-conselho" id="professional-conselho-label">Número do Conselho</label>
+                                <input type="text" id="professional-conselho" placeholder="Ex: 123456" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="professional-phone">Telefone</label>
+                                <input type="tel" id="professional-phone" placeholder="(XX) XXXXX-XXXX">
+                            </div>
+                            <div class="modal-buttons">
+                              <button type="submit" class="modal-button btn-primary">Salvar</button>
+                            </div>
+                          </form>
+                        </div>
+                        <div class="registration-list-container">
+                          <h3>Profissionais Cadastrados</h3>
+                          <table class="management-table">
+                            <thead><tr><th>Nome</th><th>Especialidade</th><th>Registro</th><th>Telefone</th><th>Ações</th></tr></thead>
+                            <tbody id="professionals-table-body"></tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="subtab-specialties" class="sub-tab-panel hidden">
+                        <div class="registration-grid">
+                            <div class="registration-form-container">
+                                <h3>Adicionar/Editar Especialidade</h3>
+                                <form id="specialty-form-modal"> <input type="hidden" id="specialty-id">
+                                    <div class="form-group">
+                                        <label for="specialty-name">Nome da Especialidade</label>
+                                        <input type="text" id="specialty-name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="specialty-patients-per-hour">Pacientes/hora</label>
+                                        <input type="number" id="specialty-patients-per-hour" min="1" required>
+                                    </div>
+                                    <div class="modal-buttons">
+                                        <button type="submit" class="modal-button btn-primary">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="registration-list-container">
+                                <h3>Especialidades Cadastradas</h3>
+                                <table class="management-table">
+                                    <thead><tr><th>Nome</th><th>Pacientes/hora</th><th>Ações</th></tr></thead>
+                                    <tbody id="specialties-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="subtab-units" class="sub-tab-panel hidden">
+                        <div class="registration-grid">
+                            <div class="registration-form-container">
+                                <h3>Adicionar/Editar Unidade</h3>
+                                <form id="unit-form-modal"> <input type="hidden" id="unit-id">
+                                    <div class="form-group">
+                                        <label for="unit-name-input">Nome da Unidade</label>
+                                        <input type="text" id="unit-name-input" required>
+                                    </div>
+                                    <div class="modal-buttons">
+                                        <button type="submit" class="modal-button btn-primary">Salvar</button>
+                                    </div>
+                                </form>
+                                <hr style="margin: 30px 0;">
+                                <h3>Adicionar Sala a uma Unidade</h3>
+                                <form id="add-room-form">
+                                    <div class="form-group">
+                                        <label for="unit-select-for-room">Unidade</label>
+                                        <select id="unit-select-for-room" required></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="room-name-input">Nome da Sala</label>
+                                        <input type="text" id="room-name-input" required>
+                                    </div>
+                                    <div class="modal-buttons">
+                                        <button type="submit" class="modal-button btn-primary">Adicionar Sala</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="registration-list-container">
+                                <h3>Unidades e Salas</h3>
+                                <div id="units-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="notification-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="notification-title">Notificação</h2>
+            <p id="notification-message">Mensagem aqui.</p>
+            <div class="modal-buttons">
+                <button class="modal-button btn-primary" id="notification-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="add-options-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Adicionar Alocação</h2>
+            <p>Como você deseja adicionar este profissional à escala?</p>
+            <div class="modal-buttons">
+               <button type="button" class="modal-button btn-secondary" id="add-cancel-btn">Cancelar</button>
+               <button class="modal-button btn-primary" id="add-once-btn">Somente neste dia</button>
+               <button class="modal-button btn-success" id="add-recurring-btn">Repetir Semanalmente</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="remove-options-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Remover Alocação Recorrente</h2>
+            <p>Esta é uma alocação recorrente. Como você deseja removê-la?</p>
+            <div class="modal-buttons">
+                <button type="button" class="modal-button btn-secondary" id="remove-cancel-btn">Cancelar</button>
+                <button class="modal-button btn-primary" id="remove-one-btn">Remover apenas esta</button>
+                <button class="modal-button btn-warning" id="remove-future-btn">Remover esta e as futuras</button>
+                <button class="modal-button btn-danger" id="remove-all-btn">Remover todas as ocorrências</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="edit-hours-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Horário do Turno</h2>
+            <form id="edit-hours-form">
+                <div class="form-group">
+                    <label for="edit-start-time">Horário de Início</label>
+                    <input type="time" id="edit-start-time" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-end-time">Horário de Fim</label>
+                    <input type="time" id="edit-end-time" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="edit-hours-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-options-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Aplicar Edição de Horário</h2>
+            <p>Esta é uma alocação recorrente. Como deseja aplicar a mudança de horário?</p>
+            <div class="modal-buttons">
+                <button type="button" class="modal-button btn-secondary" id="edit-options-cancel-btn">Cancelar</button>
+                <button class="modal-button btn-primary" id="edit-one-btn">Aplicar somente a esta</button>
+                <button class="modal-button btn-success" id="edit-future-btn">Aplicar a esta e futuras</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="timesheet-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Exportar Folha de Ponto</h2>
+              <form id="timesheet-form">
+                <div class="form-group">
+                    <label for="timesheet-start-date">Data de Início</label>
+                    <input type="date" id="timesheet-start-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="timesheet-end-date">Data de Fim</label>
+                    <input type="date" id="timesheet-end-date" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="timesheet-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Exportar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="validation-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Validar Presença</h2>
+            <form id="validation-form">
+                <div class="form-group">
+                  <label>Profissional:</label>
+                  <p id="validation-professional-name"></p>
+                </div>
+                <div class="form-group">
+                    <label for="validation-status">Status</label>
+                    <select id="validation-status">
+                        <option value="true">Presente</option>
+                        <option value="false">Ausente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="validation-observation">Observações</label>
+                    <textarea id="validation-observation" rows="3"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="validation-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Salvar Validação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-professional-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Profissional</h2>
+            <form id="edit-professional-form">
+                <input type="hidden" id="edit-professional-id">
+                <div class="form-group">
+                    <label for="edit-professional-name">Nome Completo</label>
+                    <input type="text" id="edit-professional-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-professional-specialty">Especialidade</label>
+                    <select id="edit-professional-specialty" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-professional-conselho-tipo">Tipo de Conselho</label>
+                    <select id="edit-professional-conselho-tipo" required>
+                        <option value="CRM">CRM</option>
+                        <option value="COREN">COREN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-professional-conselho">Número do Conselho</label>
+                    <input type="text" id="edit-professional-conselho" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-professional-phone">Telefone</label>
+                    <input type="tel" id="edit-professional-phone">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="cancel-edit-professional">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-specialty-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Especialidade</h2>
+            <form id="edit-specialty-form">
+                <input type="hidden" id="edit-specialty-id">
+                <div class="form-group">
+                    <label for="edit-specialty-name">Nome da Especialidade</label>
+                    <input type="text" id="edit-specialty-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-specialty-patients-per-hour">Pacientes/hora</label>
+                    <input type="number" id="edit-specialty-patients-per-hour" min="1" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="cancel-edit-specialty">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-unit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Unidade</h2>
+            <form id="edit-unit-form">
+                <input type="hidden" id="edit-unit-id">
+                <div class="form-group">
+                    <label for="edit-unit-name">Nome da Unidade</label>
+                    <input type="text" id="edit-unit-name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="cancel-edit-unit">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="print-options-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="print-options-title">Opções de Impressão</h2>
+            <form id="print-options-form">
+                <div class="form-group">
+                    <label for="print-unit-filter">Filtrar por Unidade</label>
+                    <select id="print-unit-filter">
+                        <option value="all">Todas as Unidades</option>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="print-options-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-primary">Gerar Impressão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="delete-password-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Confirmar Exclusão</h2>gemini
+            <p>Por favor, insira a senha de administrador para confirmar a ação.</p>
+            <form id="delete-password-form">
+                <div class="form-group">
+                    <label for="delete-password-input">Senha de Exclusão</label>
+                    <input type="password" id="delete-password-input" required autocomplete="current-password">
+                </div>
+                <p id="delete-password-error-msg" class="hidden" style="color: var(--danger-color);">Senha incorreta.</p>
+                <div class="modal-buttons">
+                    <button type="button" class="modal-button btn-secondary" id="cancel-delete-password-btn">Cancelar</button>
+                    <button type="submit" class="modal-button btn-danger">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
