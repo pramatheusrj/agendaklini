@@ -181,25 +181,25 @@ export async function handleDrop(e) {
     }
 }
 
+
+
+
+
 async function handleScheduleDrop(target) {
-    if (target.querySelector(selectors.dataAttributes.allocatedSlot)) {
-        return ui.showNotification("Este horário já está ocupado.", "Erro de Alocação");
-    }
+  const draggedItem = state.draggedItem();
+  const isMoving = !!draggedItem.dataset.scheduleId;
 
-    const draggedItem = state.draggedItem();
-    const isMoving = !!draggedItem.dataset.scheduleId;
-
-    try {
-        if (isMoving) {
-            await firebaseService.moveAllocation(draggedItem.dataset.scheduleId, target.dataset);
-            ui.showNotification("Alocação movida. A recorrência foi desfeita.", "Sucesso");
-        } else {
-            state.setCurrentActionContext({ professionalId: draggedItem.dataset.professionalId, ...target.dataset, period: target.dataset.period });
-            ui.showModal(document.querySelector(selectors.modals.addOptions));
-        }
-    } catch (error) {
-        handleError(error, "Erro ao processar a alocação.");
+  try {
+    if (isMoving) {
+      await firebaseService.moveAllocation(draggedItem.dataset.scheduleId, target.dataset);
+      ui.showNotification("Alocação movida. A recorrência foi desfeita.", "Sucesso");
+    } else {
+      state.setCurrentActionContext({ professionalId: draggedItem.dataset.professionalId, ...target.dataset, period: target.dataset.period });
+      ui.showModal(document.querySelector(selectors.modals.addOptions));
     }
+  } catch (error) {
+    handleError(error, "Erro ao processar a alocação.");
+  }
 }
 
 async function handleRemoveDrop() {
@@ -221,20 +221,46 @@ async function handleRemoveDrop() {
     }
 }
 
+
 export async function handleAddOnce() {
-    ui.hideModal(document.querySelector(selectors.modals.addOptions));
-    const { professionalId, date, unitId, room, period } = state.currentActionContext();
-    const professional = state.allProfessionals().find(p => p.id === professionalId);
-    if (!professional) return handleError(new Error("Profissional não encontrado"), "Profissional não encontrado.");
+  ui.hideModal(document.querySelector(selectors.modals.addOptions));
+  const { professionalId, date, unitId, room, period } = state.currentActionContext();
+  const professional = state.allProfessionals().find(p => p.id === professionalId);
+  if (!professional) return handleError(new Error("Profissional não encontrado"), "Profissional não encontrado.");
 
-    const isMorning = period === 'Manhã';
-    const newAllocation = { professionalId, date, unitId, room, period, startTime: isMorning ? constants.DEFAULT_MORNING_START : constants.DEFAULT_AFTERNOON_START, endTime: isMorning ? constants.DEFAULT_MORNING_END : constants.DEFAULT_AFTERNOON_END, recurringId: null };
+  const isMorning = period === 'Manhã';
+  let start = isMorning ? constants.DEFAULT_MORNING_START  : constants.DEFAULT_AFTERNOON_START;
+  const end = isMorning ? constants.DEFAULT_MORNING_END    : constants.DEFAULT_AFTERNOON_END;
 
-    try {
-        await firebaseService.createSingleAllocation(newAllocation);
-        ui.showNotification("Profissional alocado com sucesso.", "Sucesso");
-    } catch (error) { handleError(error, "Erro ao alocar profissional."); }
+  // NOVO: pega alocações no mesmo dia/sala/período, ordena e encaixa após a última
+  const existing = state.scheduleData()
+    .filter(s => s.date === date && s.unitId === unitId && s.room === room && s.period === period)
+    .sort((a,b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+  if (existing.length > 0) {
+    const last = existing[existing.length - 1];
+    if (last.endTime && last.endTime < end) {
+      start = last.endTime;
+    }
+  }
+
+  const newAllocation = { professionalId, date, unitId, room, period, startTime: start, endTime: end, recurringId: null };
+
+  try {
+    await firebaseService.createSingleAllocation(newAllocation);
+    ui.showNotification("Profissional alocado com sucesso.", "Sucesso");
+  } catch (error) {
+    handleError(error, "Erro ao alocar profissional.");
+  }
 }
+
+
+
+
+
+
+
+
 
 export async function handleAddRecurring() {
     ui.hideModal(document.querySelector(selectors.modals.addOptions));
