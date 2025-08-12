@@ -145,6 +145,7 @@ export function renderScheduleGrid() {
     const weekDays = getWeekDates(state.currentDate());
     currentWeekDisplay.textContent = getWeekDisplay(state.currentDate());
 
+    // Cabeçalhos
     const headers = ['Unidade', 'Sala / Período', ...weekDays.map(d => `${d.toLocaleDateString('pt-BR', { weekday: 'short' })} - ${d.getDate()}`)];
     headers.forEach(headerText => {
         fragment.appendChild(createDOMElement('div', { className: 'grid-header', textContent: headerText }));
@@ -152,10 +153,9 @@ export function renderScheduleGrid() {
 
     const selectedUnitId = document.querySelector(selectors.filters.unit).value;
     const validUnits = state.allUnits().filter(u => u && typeof u.name === 'string');
-    const visibleUnits = selectedUnitId === 'all'
-        ? validUnits
-        : validUnits.filter(u => u.id === selectedUnitId);
+    const visibleUnits = selectedUnitId === 'all' ? validUnits : validUnits.filter(u => u.id === selectedUnitId);
 
+    // Dias com plantão contínuo (manhã atravessando 13:00)
     const continuousShiftCells = new Set(
         state.scheduleData()
             .filter(alloc => alloc.startTime && alloc.endTime && alloc.startTime < '13:00' && alloc.endTime > '13:00')
@@ -166,6 +166,7 @@ export function renderScheduleGrid() {
         const rooms = (Array.isArray(unit.rooms) && unit.rooms.length > 0) ? [...unit.rooms].sort() : ['N/A'];
         const rowBaseClass = unitIndex % 2 === 0 ? 'grid-row-light' : 'grid-row-dark';
 
+        // Coluna "Unidade" ocupa 2 linhas por sala (manhã+tarde)
         const rowSpan = rooms.length * 2;
         fragment.appendChild(createDOMElement('div', {
             className: `unit-header ${rowBaseClass}`,
@@ -175,6 +176,7 @@ export function renderScheduleGrid() {
 
         rooms.forEach(roomName => {
             ['Manhã', 'Tarde'].forEach(period => {
+                // Coluna "Sala / Período"
                 fragment.appendChild(createDOMElement('div', {
                     className: `period-header ${rowBaseClass}`,
                     children: [
@@ -187,50 +189,66 @@ export function renderScheduleGrid() {
                     const dateString = day.toISOString().split('T')[0];
                     const isContinuousDay = continuousShiftCells.has(`${dateString}-${unit.id}-${roomName}`);
 
-                    if (period === 'Tarde' && isContinuousDay) {
-                        return;
-                    }
+                    // Se manhã atravessa o almoço, a tarde é “consumida” por esse turno
+                    if (period === 'Tarde' && isContinuousDay) return;
 
-                    const allocation = state.scheduleData().find(s =>
-                        s.date === dateString && s.unitId === unit.id && s.room === roomName &&
-                        (isContinuousDay ? true : s.period === period)
-                    );
+                    // >>> NOVO: pegar TODAS as alocações da célula (em vez de find(...))
+                    const allocations = state.scheduleData()
+                        .filter(s =>
+                            s.date === dateString &&
+                            s.unitId === unit.id &&
+                            s.room === roomName &&
+                            (isContinuousDay ? true : s.period === period)
+                        )
+                        .sort((a,b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
-                    let cellContent;
-                    if (allocation) {
-                        const professional = state.allProfessionals().find(p => p.id === allocation.professionalId);
-                        const specialty = professional ? state.allSpecialties().find(s => s.id === professional.specialtyId) : null;
-                        
-                        cellContent = createDOMElement('div', {
-                            className: `allocated-slot ${allocation.validated ? 'validated' : ''}`,
-                            dataset: { scheduleId: allocation.id, recurringId: allocation.recurringId || '' },
-                            innerHTML: `
-                                <div class="allocated-slot-header">${professional?.name || 'Não encontrado'}</div>
-                                <div class="allocated-slot-spec">${specialty?.name || 'N/A'}</div>
-                                <div class="allocated-slot-council">${professional?.conselhoTipo || 'CRM'}: ${professional?.conselho || 'N/A'}</div>
-                                <div class="allocated-slot-phone">${professional?.phone ? `📞 ${professional.phone}` : ''}</div>
-                                <div class="allocated-slot-time">${allocation.startTime || 'N/A'} - ${allocation.endTime || 'N/A'}</div>
-                                <div class="allocated-slot-actions">
-                                    <button class="slot-action-btn edit-hours-btn" title="Editar Horário"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M5 18.5v-3.225l7.1-7.1 3.225 3.225-7.1 7.1H5Zm14.2-8.575L16.075 6.8l1.425-1.425q.575-.575 1.413-.575t1.412.575l.4.4q.575.575.575 1.413t-.575 1.412L19.2 9.925ZM3 20.5v-5.2l9.6-9.6q.3-.3.675-.45t.775-.15q.4 0 .775.15t.675.45l3.225 3.225q.3.3.45.675t.15.775q0 .4-.15.775t-.45.675L8.2 20.5H3Z"></path></svg></button>
-                                    <button class="slot-action-btn validate-btn" title="Validar Presença"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="m9.55 18-5.7-5.7 1.425-1.425L9.55 15.15l9.175-9.175L20.15 7.4 9.55 18Z"></path></svg></button>
-                                </div>
-                            `
-                        });
-                        
-                        cellContent.draggable = state.currentUserRole() === 'gestor';
+                    // Sempre cria uma drop-zone como contêiner (vazia ou com slots)
+                    const dz = createDOMElement('div', {
+                        className: 'drop-zone',
+                        dataset: { date: dateString, unitId: unit.id, room: roomName, period }
+                    });
 
+                    if (allocations.length === 0) {
+                        dz.textContent = 'Vago';
                     } else {
-                        cellContent = createDOMElement('div', {
-                            className: 'drop-zone',
-                            textContent: 'Vago',
-                            dataset: { date: dateString, unitId: unit.id, room: roomName, period: period }
+                        allocations.forEach(allocation => {
+                            const professional = state.allProfessionals().find(p => p.id === allocation.professionalId);
+                            const specialty = professional ? state.allSpecialties().find(s => s.id === professional.specialtyId) : null;
+
+                            const slot = createDOMElement('div', {
+                                className: `allocated-slot ${allocation.validated ? 'validated' : ''}`,
+                                dataset: { scheduleId: allocation.id, recurringId: allocation.recurringId || '' },
+                                innerHTML: `
+                                    <div class="allocated-slot-header">${professional?.name || 'Não encontrado'}</div>
+                                    <div class="allocated-slot-spec">${specialty?.name || 'N/A'}</div>
+                                    <div class="allocated-slot-council">${professional?.conselhoTipo || 'CRM'}: ${professional?.conselho || 'N/A'}</div>
+                                    <div class="allocated-slot-phone">${professional?.phone ? `📞 ${professional.phone}` : ''}</div>
+                                    <div class="allocated-slot-time">${allocation.startTime || 'N/A'} - ${allocation.endTime || 'N/A'}</div>
+
+
+
+                                    <div class="allocated-slot-actions">
+                                        <button class="slot-action-btn edit-hours-btn" title="Editar Horário">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 18.5v-3.225l7.1-7.1 3.225 3.225-7.1 7.1H5Zm14.2-8.575L16.075 6.8l1.425-1.425q.575-.575 1.413-.575t1.412.575l.4.4q.575.575.575 1.413t-.575 1.412L19.2 9.925ZM3 20.5v-5.2l9.6-9.6q.3-.3.675-.45t.775-.15q.4 0 .775.15t.675.45l3.225 3.225q.3.3.45.675t.15.775q0 .4-.15.775t-.45.675L8.2 20.5H3Z"/></svg>
+                                        </button>
+                                        <button class="slot-action-btn validate-btn" title="Validar Presença">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m9.55 18-5.7-5.7 1.425-1.425L9.55 15.15l9.175-9.175L20.15 7.4 9.55 18Z"/></svg>
+                                        </button>
+                                    </div>
+
+
+
+                                `
+                            });
+                            slot.draggable = state.currentUserRole() === 'gestor';
+                            dz.appendChild(slot);
                         });
                     }
 
                     fragment.appendChild(createDOMElement('div', {
                         className: `grid-cell ${rowBaseClass}`,
                         style: (period === 'Manhã' && isContinuousDay) ? 'grid-row: span 2; align-self: stretch;' : '',
-                        children: [cellContent]
+                        children: [dz]
                     }));
                 });
             });
@@ -239,6 +257,10 @@ export function renderScheduleGrid() {
 
     scheduleGrid.appendChild(fragment);
 }
+
+
+
+
 
 const createDOMElement = (tag, { className, textContent, dataset, style, children = [], innerHTML }) => {
     const el = document.createElement(tag);
